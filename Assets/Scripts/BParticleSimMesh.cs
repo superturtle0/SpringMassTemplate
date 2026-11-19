@@ -145,19 +145,30 @@ public class BParticleSimMesh : MonoBehaviour
      * ...
      ***/
 
+    private void ResetParticleForces()
+    {
+        for (int particleIndex = 0; particleIndex < mesh.vertices.Length; particleIndex++)
+        {
+            particles[particleIndex].currentForces = Vector3.zero;
+        }
+    }
+
     void UpdateMesh()
     {
         Vector3[] newVertices = new Vector3[mesh.vertices.Length];
         for(int particleIndex = 0; particleIndex < mesh.vertices.Length; particleIndex++)
         {
-            particles[particleIndex].currentForces = Vector3.zero;
             foreach(BSpring spr in particles[particleIndex].attachedSprings)
             {
-                Vector3 sprForce = ParticleParticleForce2(particles[particleIndex], spr);
+                Vector3 sprForce = ParticleParticleForce(particles[particleIndex], spr);
                 particles[particleIndex].currentForces += sprForce;
                 particles[spr.attachedParticle].currentForces -= sprForce;
-                //if(spr.attachedParticle == mesh.veri)
+                //if (spr.attachedParticle == mesh.vertices.Length - 1) connected++;
+                //if (spr.attachedParticle == mesh.vertices.Length - 1) Debug.Log(particles[spr.attachedParticle].currentForces);
+                //if (particleIndex == mesh.vertices.Length - 1) Debug.Log("PARTICLE" + particles[particleIndex].currentForces);
             }
+            //Debug.Log("----");
+            //Debug.Log(connected);
             particles[particleIndex].velocity += particles[particleIndex].currentForces / particles[particleIndex].mass;
             particles[particleIndex].position += particles[particleIndex].velocity * Time.deltaTime;
             newVertices[particleIndex] = transform.InverseTransformPoint(particles[particleIndex].position);
@@ -190,6 +201,7 @@ public class BParticleSimMesh : MonoBehaviour
     /// </summary>
     public void Update()
     {
+        ResetParticleForces();
         UpdateMesh();
         
         if (debugRender)
