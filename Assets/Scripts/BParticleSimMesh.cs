@@ -63,7 +63,15 @@ public class BParticleSimMesh : MonoBehaviour
      * - the plane (BPlane)
      ***/
 
+    public Transform groundPlane;
+    public bool handlePlaneCollisions = true;
+    public float particleMass = 1f;
+    public bool useGravity = true;
+    public Vector3 gravityValue = new Vector3(0f, -9.8f, 0f);
 
+    private Mesh mesh;
+    private BParticle[] particles;
+    private BPlane plane;
 
     /// <summary>
     /// Init everything
@@ -81,7 +89,50 @@ public class BParticleSimMesh : MonoBehaviour
     /// </summary>
     void Start()
     {
+        mesh = GetComponent<MeshFilter>().mesh;
+        InitParticles();
+        InitPlane();
+    }
 
+    void InitPlane()
+    {
+        
+    }
+
+    void InitParticles()
+    {
+        particles = new BParticle[mesh.vertices.Length];
+        for (int particleIndex = 0; particleIndex < particles.Length; particleIndex++)
+        {
+            BParticle part = new BParticle();
+            part.position = transform.TransformPoint(mesh.vertices[particleIndex]);
+            part.velocity = Vector3.zero;
+            part.mass = particleMass;
+
+            BContactSpring cspr = new BContactSpring();
+            cspr.kd = contactSpringKD;
+            cspr.ks = contactSpringKS;
+            cspr.restLength = 1f; //change later, idk what is meant by "think about it"
+            cspr.attachPoint = part.position;
+            part.contactSpring = cspr;
+
+            part.attachedToContact = false;
+            part.attachedSprings = new List<BSpring>();
+
+            for (int otherParticle = particleIndex + 1; otherParticle < particles.Length; otherParticle++)
+            {
+                BSpring spr = new BSpring();
+                spr.kd = defaultSpringKD;
+                spr.ks = defaultSpringKS;
+                spr.restLength = 1f; //same thing, change later
+                spr.attachedParticle = otherParticle;
+                part.attachedSprings.Add(spr);
+            }
+
+            part.currentForces = Vector3.zero;
+
+            particles[particleIndex] = part;
+        }
     }
 
 
@@ -94,6 +145,44 @@ public class BParticleSimMesh : MonoBehaviour
      * ...
      ***/
 
+    void UpdateMesh()
+    {
+        Vector3[] newVertices = new Vector3[mesh.vertices.Length];
+        for(int particleIndex = 0; particleIndex < mesh.vertices.Length; particleIndex++)
+        {
+            particles[particleIndex].currentForces = Vector3.zero;
+            foreach(BSpring spr in particles[particleIndex].attachedSprings)
+            {
+                Vector3 sprForce = ParticleParticleForce2(particles[particleIndex], spr);
+                particles[particleIndex].currentForces += sprForce;
+                particles[spr.attachedParticle].currentForces -= sprForce;
+                //if(spr.attachedParticle == mesh.veri)
+            }
+            particles[particleIndex].velocity += particles[particleIndex].currentForces / particles[particleIndex].mass;
+            particles[particleIndex].position += particles[particleIndex].velocity * Time.deltaTime;
+            newVertices[particleIndex] = transform.InverseTransformPoint(particles[particleIndex].position);
+        }
+        mesh.SetVertices(newVertices);
+        
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+    }
+
+    Vector3 ParticleParticleForce2(BParticle part, BSpring spr)
+    {
+        return new Vector3(0, 1, 0);
+    }
+
+    Vector3 ParticleParticleForce(BParticle part, BSpring spr)
+    {
+        BParticle otherPart = particles[spr.attachedParticle];
+        Vector3 posDiff = part.position - otherPart.position;
+        float diffMag = posDiff.magnitude;
+        Vector3 diffNormalized = posDiff / diffMag;
+        Vector3 springTerm = spr.ks * ((spr.restLength - diffMag) * diffNormalized);
+        Vector3 dampTerm = spr.kd * Vector3.Dot((part.velocity - otherPart.velocity), diffNormalized) * diffNormalized;
+        return springTerm - dampTerm;
+    }
 
 
     /// <summary>
@@ -101,7 +190,8 @@ public class BParticleSimMesh : MonoBehaviour
     /// </summary>
     public void Update()
     {
-        /* This will work if you have a correctly made particles array
+        UpdateMesh();
+        
         if (debugRender)
         {
             int particleCount = particles.Length;
@@ -116,6 +206,6 @@ public class BParticleSimMesh : MonoBehaviour
                 }
             }
         }
-        */
+        
     }
 }
