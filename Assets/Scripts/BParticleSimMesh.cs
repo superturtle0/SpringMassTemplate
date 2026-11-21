@@ -149,7 +149,7 @@ public class BParticleSimMesh : MonoBehaviour
             BContactSpring cspr = new BContactSpring();
             cspr.kd = contactSpringKD;
             cspr.ks = contactSpringKS;
-            cspr.restLength = 1f; //change later, idk what is meant by "think about it"
+            cspr.restLength = 0f; //matches starting spa
             cspr.attachPoint = part.position;
             part.contactSpring = cspr;
 
@@ -161,7 +161,7 @@ public class BParticleSimMesh : MonoBehaviour
                 BSpring spr = new BSpring();
                 spr.kd = defaultSpringKD;
                 spr.ks = defaultSpringKS;
-                spr.restLength = 1f; //same thing, change later
+                spr.restLength = 1f; //NEVER USED (particles ideally want to rest exactly on surface)
                 spr.attachedParticle = otherParticle;
                 part.attachedSprings.Add(spr);
             }
@@ -231,6 +231,7 @@ public class BParticleSimMesh : MonoBehaviour
         Vector3 contact = part.position - (Vector3.Dot(part.position - plane.position, plane.normal)/Vector3.Dot(plane.normal,plane.normal)*plane.normal);
         Vector3 diff = part.position - contact;
         float projectedDiff = Vector3.Dot(diff, plane.normal);
+        if (projectedDiff > 0) return Vector3.zero; //particle is above ground
         Vector3 springTerm = -part.contactSpring.ks * projectedDiff * plane.normal;
         Vector3 dampTerm = part.contactSpring.kd * part.velocity;
         return springTerm - dampTerm;
