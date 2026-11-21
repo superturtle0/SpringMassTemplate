@@ -31,7 +31,7 @@ public class BParticleSimMesh : MonoBehaviour
         public BContactSpring contactSpring;    // Special spring for contact forces
         public bool attachedToContact;          // is thi sparticle currently attached to a contact (ground plane contact)
         public List<BSpring> attachedSprings;   // all attached springs, as a list in case we want to modify later fast
-        public Vector3 currentForces;           // accumulate forces here on each step        
+        public Vector3 currentForces;           // accumulate forces here on each step
     }
 
     public struct BPlane
@@ -73,6 +73,8 @@ public class BParticleSimMesh : MonoBehaviour
     private BParticle[] particles;
     private BPlane plane;
 
+    private List<int>[] equivalentVertices;
+
     /// <summary>
     /// Init everything
     /// HINT: in particular you should probbaly handle the mesh, init all the particles, and the ground plane
@@ -92,6 +94,39 @@ public class BParticleSimMesh : MonoBehaviour
         mesh = GetComponent<MeshFilter>().mesh;
         InitParticles();
         InitPlane();
+        FindEquivalentVertices();
+    }
+
+    void FindEquivalentVertices()
+    {
+        equivalentVertices = new List<int>[particles.Length];
+        Dictionary<Vector3, List<int>> equivalentVerticesDict = new Dictionary<Vector3, List<int>>();
+        for(int i = 0; i < mesh.vertices.Length; i++)
+        {
+            Vector3 vert = mesh.vertices[i];
+            List<int> equivalents;
+            if(equivalentVerticesDict.TryGetValue(vert,out equivalents))
+            {
+                equivalents.Add(i);
+            } else
+            {
+                equivalents = new List<int>();
+                equivalents.Add(i);
+                equivalentVerticesDict.Add(vert, equivalents);
+            }
+        }
+        //We know the smallest indexed vertex must be at the first index of the list in the dictionary
+        //So we know the first index of the list will be the vertex that is referred to in updatemesh
+        //So we use the first index of the list as the new index for a new list with its equivalents
+        foreach(KeyValuePair<Vector3,List<int>> pair in equivalentVerticesDict)
+        {
+            List<int> curEquivalents = new List<int>();
+            equivalentVertices[pair.Value[0]] = curEquivalents;
+            for(int i = 1; i < pair.Value.Count; i++)
+            {
+                curEquivalents.Add(pair.Value[i]);
+            }
+        }
     }
 
     void InitPlane()
@@ -101,7 +136,7 @@ public class BParticleSimMesh : MonoBehaviour
 
     void InitParticles()
     {
-        particles = new BParticle[mesh.vertices.Length];
+        particles = new BParticle[mesh.vertices.Length/3]; //for some reason each corner actually has 3 vertices
         for (int particleIndex = 0; particleIndex < particles.Length; particleIndex++)
         {
             BParticle part = new BParticle();
@@ -147,7 +182,7 @@ public class BParticleSimMesh : MonoBehaviour
 
     private void ResetParticleForces()
     {
-        for (int particleIndex = 0; particleIndex < mesh.vertices.Length; particleIndex++)
+        for (int particleIndex = 0; particleIndex < particles.Length; particleIndex++)
         {
             particles[particleIndex].currentForces = Vector3.zero;
         }
@@ -155,33 +190,29 @@ public class BParticleSimMesh : MonoBehaviour
 
     void UpdateMesh()
     {
-        Vector3[] newVertices = new Vector3[mesh.vertices.Length];
-        for(int particleIndex = 0; particleIndex < mesh.vertices.Length; particleIndex++)
+        Vector3[] newVertices = new Vector3[particles.Length * 3];
+        for(int particleIndex = 0; particleIndex < particles.Length; particleIndex++)
         {
             foreach(BSpring spr in particles[particleIndex].attachedSprings)
             {
                 Vector3 sprForce = ParticleParticleForce(particles[particleIndex], spr);
                 particles[particleIndex].currentForces += sprForce;
                 particles[spr.attachedParticle].currentForces -= sprForce;
-                //if (spr.attachedParticle == mesh.vertices.Length - 1) connected++;
-                //if (spr.attachedParticle == mesh.vertices.Length - 1) Debug.Log(particles[spr.attachedParticle].currentForces);
-                //if (particleIndex == mesh.vertices.Length - 1) Debug.Log("PARTICLE" + particles[particleIndex].currentForces);
             }
-            //Debug.Log("----");
-            //Debug.Log(connected);
+        }
+        for (int particleIndex = 0; particleIndex < particles.Length; particleIndex++)
+        {
             particles[particleIndex].velocity += particles[particleIndex].currentForces / particles[particleIndex].mass;
-            particles[particleIndex].position += particles[particleIndex].velocity * Time.deltaTime;
+            particles[particleIndex].position += particles[particleIndex].velocity;
             newVertices[particleIndex] = transform.InverseTransformPoint(particles[particleIndex].position);
+            foreach(int equivalentVertex in equivalentVertices[particleIndex]) newVertices[equivalentVertex] = newVertices[particleIndex];
         }
         mesh.SetVertices(newVertices);
-        
-        mesh.RecalculateNormals();
-        mesh.RecalculateBounds();
     }
 
     Vector3 ParticleParticleForce2(BParticle part, BSpring spr)
     {
-        return new Vector3(0, 1, 0);
+        return new Vector3(0, 0.01f, 0);
     }
 
     Vector3 ParticleParticleForce(BParticle part, BSpring spr)

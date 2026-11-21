@@ -297,6 +297,10 @@ PrefabInstance:
       propertyPath: debugRender
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 7615318666792419822, guid: 6ec2ba81dba01a84884331a6d6e1a08c, type: 3}
+      propertyPath: particleMass
+      value: 100000
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -510,7 +514,15 @@ PrefabInstance:
       objectReference: {fileID: 114397988}
     - target: {fileID: 3040591912450516665, guid: b43189b261145aa49b37f0b57eaf5bef, type: 3}
       propertyPath: particleMass
-      value: 1
+      value: 100000
+      objectReference: {fileID: 0}
+    - target: {fileID: 3040591912450516665, guid: b43189b261145aa49b37f0b57eaf5bef, type: 3}
+      propertyPath: defaultSpringKD
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3040591912450516665, guid: b43189b261145aa49b37f0b57eaf5bef, type: 3}
+      propertyPath: defaultSpringKS
+      value: 200
       objectReference: {fileID: 0}
     - target: {fileID: 6988472050468893402, guid: b43189b261145aa49b37f0b57eaf5bef, type: 3}
       propertyPath: m_LocalPosition.x
