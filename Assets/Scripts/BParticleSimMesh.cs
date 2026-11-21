@@ -131,7 +131,9 @@ public class BParticleSimMesh : MonoBehaviour
 
     void InitPlane()
     {
-        
+        plane = new BPlane();
+        plane.position = groundPlane.position;
+        plane.normal = groundPlane.up;
     }
 
     void InitParticles()
@@ -195,27 +197,46 @@ public class BParticleSimMesh : MonoBehaviour
         {
             foreach(BSpring spr in particles[particleIndex].attachedSprings)
             {
-                Vector3 sprForce = ParticleParticleForce(particles[particleIndex], spr);
+                Vector3 sprForce = ParticleForce(particles[particleIndex], spr);
                 particles[particleIndex].currentForces += sprForce;
                 particles[spr.attachedParticle].currentForces -= sprForce;
             }
+            if(handlePlaneCollisions) particles[particleIndex].currentForces += PlaneForce(particles[particleIndex]);
+            if(useGravity) particles[particleIndex].currentForces += GravityForce(particles[particleIndex]);
         }
         for (int particleIndex = 0; particleIndex < particles.Length; particleIndex++)
         {
-            particles[particleIndex].velocity += particles[particleIndex].currentForces / particles[particleIndex].mass;
-            particles[particleIndex].position += particles[particleIndex].velocity;
+            particles[particleIndex].velocity += particles[particleIndex].currentForces / particles[particleIndex].mass * Time.deltaTime;
+            particles[particleIndex].position += particles[particleIndex].velocity * Time.deltaTime;
             newVertices[particleIndex] = transform.InverseTransformPoint(particles[particleIndex].position);
             foreach(int equivalentVertex in equivalentVertices[particleIndex]) newVertices[equivalentVertex] = newVertices[particleIndex];
         }
         mesh.SetVertices(newVertices);
     }
 
-    Vector3 ParticleParticleForce2(BParticle part, BSpring spr)
+    Vector3 GravityForce(BParticle part)
     {
-        return new Vector3(0, 0.01f, 0);
+        return new Vector3(0f, -9.8f, 0f) * part.mass;
     }
 
-    Vector3 ParticleParticleForce(BParticle part, BSpring spr)
+    Vector3 PlaneForce(BParticle part)
+    {
+        /* Find nearest point using this:
+         * Q=P-((dot(P-R,n)/dot(n,n))*n)
+         * where Q is the nearest point,
+         * P is the spring point,
+         * R is any point on the plane,
+         * and n is the normal vector.
+         */
+        Vector3 contact = part.position - (Vector3.Dot(part.position - plane.position, plane.normal)/Vector3.Dot(plane.normal,plane.normal)*plane.normal);
+        Vector3 diff = part.position - contact;
+        float projectedDiff = Vector3.Dot(diff, plane.normal);
+        Vector3 springTerm = -part.contactSpring.ks * projectedDiff * plane.normal;
+        Vector3 dampTerm = part.contactSpring.kd * part.velocity;
+        return springTerm - dampTerm;
+    }
+
+    Vector3 ParticleForce(BParticle part, BSpring spr)
     {
         BParticle otherPart = particles[spr.attachedParticle];
         Vector3 posDiff = part.position - otherPart.position;
