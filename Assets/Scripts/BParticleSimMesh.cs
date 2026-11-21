@@ -212,6 +212,8 @@ public class BParticleSimMesh : MonoBehaviour
             foreach(int equivalentVertex in equivalentVertices[particleIndex]) newVertices[equivalentVertex] = newVertices[particleIndex];
         }
         mesh.SetVertices(newVertices);
+        mesh.RecalculateBounds();
+        mesh.RecalculateNormals();
     }
 
     Vector3 GravityForce(BParticle part)
@@ -229,7 +231,8 @@ public class BParticleSimMesh : MonoBehaviour
          * and n is the normal vector.
          */
         Vector3 contact = part.position - (Vector3.Dot(part.position - plane.position, plane.normal)/Vector3.Dot(plane.normal,plane.normal)*plane.normal);
-        Vector3 diff = part.position - contact;
+        Vector3 shiftedContact = contact + plane.normal * 0.01f; //this is just to avoid z-fighting
+        Vector3 diff = part.position - shiftedContact;
         float projectedDiff = Vector3.Dot(diff, plane.normal);
         if (projectedDiff > 0) return Vector3.zero; //particle is above ground
         Vector3 springTerm = -part.contactSpring.ks * projectedDiff * plane.normal;
