@@ -73,7 +73,8 @@ public class BParticleSimMesh : MonoBehaviour
     private BParticle[] particles;
     private BPlane plane;
 
-    private List<int>[] equivalentVertices;
+    private List<int>[] equivalentVertices; //a lists of vertices that share the same position
+    //used to avoid accounting for a vertex multiple times in spring instantiation/calculations
 
     /// <summary>
     /// Init everything
@@ -207,7 +208,7 @@ public class BParticleSimMesh : MonoBehaviour
         for (int particleIndex = 0; particleIndex < particles.Length; particleIndex++)
         {
             particles[particleIndex].velocity += particles[particleIndex].currentForces / particles[particleIndex].mass * Time.deltaTime;
-            particles[particleIndex].position += particles[particleIndex].velocity * Time.deltaTime;
+            particles[particleIndex].position += particles[particleIndex].velocity * Time.deltaTime; //This is symplectic euler integration because the position is updated using the new velocity rather than the previous velocity
             newVertices[particleIndex] = transform.InverseTransformPoint(particles[particleIndex].position);
             foreach(int equivalentVertex in equivalentVertices[particleIndex]) newVertices[equivalentVertex] = newVertices[particleIndex];
         }
