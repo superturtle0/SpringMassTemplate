@@ -149,7 +149,7 @@ public class BParticleSimMesh : MonoBehaviour
             BContactSpring cspr = new BContactSpring();
             cspr.kd = contactSpringKD;
             cspr.ks = contactSpringKS;
-            cspr.restLength = 0f; //matches starting spa
+            //cspr.restLength = 0f; //NEVER USED (particles ideally want to rest exactly on surface)
             cspr.attachPoint = part.position;
             part.contactSpring = cspr;
 
@@ -161,7 +161,7 @@ public class BParticleSimMesh : MonoBehaviour
                 BSpring spr = new BSpring();
                 spr.kd = defaultSpringKD;
                 spr.ks = defaultSpringKS;
-                spr.restLength = 1f; //NEVER USED (particles ideally want to rest exactly on surface)
+                spr.restLength = (mesh.vertices[particleIndex] - mesh.vertices[otherParticle]).magnitude; //match rest length to starting distance
                 spr.attachedParticle = otherParticle;
                 part.attachedSprings.Add(spr);
             }
